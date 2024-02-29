@@ -1,18 +1,18 @@
-package main
+package tree
 
-type PriorityQueue struct {
-	nodes []WeightedNode
+type priorityQueue struct {
+	nodes []weightedNode
 }
 
-func NewPriorityQueue() *PriorityQueue {
-	return new(PriorityQueue)
+func newPriorityQueue() *priorityQueue {
+	return new(priorityQueue)
 }
 
-func (p *PriorityQueue) Push(nodes ...WeightedNode) {
+func (p *priorityQueue) Push(nodes ...weightedNode) {
 	p.nodes = append(p.nodes, nodes...)
 }
 
-func (p *PriorityQueue) Pop() (n WeightedNode) {
+func (p *priorityQueue) Pop() (n weightedNode) {
 	if p.Len() == 0 {
 		return n
 	}
@@ -32,11 +32,11 @@ func (p *PriorityQueue) Pop() (n WeightedNode) {
 	return n
 }
 
-func (p *PriorityQueue) delete(i int) {
+func (p *priorityQueue) delete(i int) {
 	copy(p.nodes[i:], p.nodes[i+1:])
 	p.nodes = p.nodes[:len(p.nodes)-1]
 }
 
-func (p *PriorityQueue) Len() int {
+func (p *priorityQueue) Len() int {
 	return len(p.nodes)
 }

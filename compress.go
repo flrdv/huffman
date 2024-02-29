@@ -1,6 +1,8 @@
-package main
+package huffman
 
 import (
+	"github.com/flrdv/huffman/internal/strext"
+	"github.com/flrdv/huffman/tree"
 	"strconv"
 	"unsafe"
 )
@@ -12,42 +14,10 @@ type Symbol struct {
 }
 
 func (s Symbol) String() string {
-	return pad(strconv.FormatUint(uint64(s.Value), 2), int(s.Bits))
+	return strext.PadBinary(strconv.FormatUint(uint64(s.Value), 2), int(s.Bits))
 }
 
-type Queue struct {
-	values []Symbol
-	index  int
-}
-
-func NewQueue() *Queue {
-	return &Queue{
-		values: make([]Symbol, 1),
-		index:  1,
-	}
-}
-
-func (q *Queue) Push(symbols ...Symbol) {
-	q.values = append(q.values, symbols...)
-}
-
-func (q *Queue) Pop() Symbol {
-	s := q.values[q.index]
-	q.index++
-
-	return s
-}
-
-func (q *Queue) Return(symbol Symbol) {
-	q.index--
-	q.values[q.index] = symbol
-}
-
-func (q *Queue) IsEmpty() bool {
-	return len(q.values) <= q.index
-}
-
-func asSymbols(leaves []Leaf, str string) (symbols []Symbol) {
+func asSymbols(leaves []tree.Leaf, str string) (symbols []Symbol) {
 	for i := 0; i < len(str); i++ {
 		symbols = append(symbols, char2symbol(leaves, str[i]))
 	}
@@ -55,7 +25,7 @@ func asSymbols(leaves []Leaf, str string) (symbols []Symbol) {
 	return symbols
 }
 
-func char2symbol(leaves []Leaf, char byte) Symbol {
+func char2symbol(leaves []tree.Leaf, char byte) Symbol {
 	for _, leaf := range leaves {
 		if leaf.Char == char {
 			return Symbol{
@@ -68,7 +38,7 @@ func char2symbol(leaves []Leaf, char byte) Symbol {
 	panic("char is not found in leaves")
 }
 
-func etx(leaves []Leaf) Symbol {
+func etx(leaves []tree.Leaf) Symbol {
 	for _, leaf := range leaves {
 		if leaf.ETX {
 			return Symbol{
@@ -85,8 +55,8 @@ func etx(leaves []Leaf) Symbol {
 }
 
 func Compress(str string) ([]uint32, int) {
-	leaves := Tree(str).Leaves()
-	queue := NewQueue()
+	leaves := tree.New(str).Leaves()
+	queue := newReturnQueue()
 	queue.Push(asSymbols(leaves, str)...)
 	queue.Push(etx(leaves))
 
@@ -104,7 +74,6 @@ func Compress(str string) ([]uint32, int) {
 		symbol := queue.Pop()
 		if symbol.Bits+bits < bitsPerBatch {
 			batch = batch | (symbol.Value << (bitsPerBatch - bits - symbol.Bits))
-			//fmt.Println("nrm", format(batch, bitsPerBatch), format(symbol.Value, symbol.Bits), symbol.Bits)
 			bits += symbol.Bits
 			continue
 		}
@@ -127,8 +96,4 @@ func Compress(str string) ([]uint32, int) {
 	}
 
 	return output, totalBits
-}
-
-func format(u uint32, bitsize uint8) string {
-	return pad(strconv.FormatUint(uint64(u), 2), int(bitsize))
 }
