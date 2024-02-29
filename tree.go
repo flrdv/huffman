@@ -6,14 +6,24 @@ import (
 	"strings"
 )
 
+const ETX = 0x03
+
 type Node struct {
 	Left, Right *Node
 	Char        byte
 }
 
+func (n *Node) String() string {
+	return fmt.Sprintf("Node(char=%s)", strconv.Quote(string(n.Char)))
+}
+
 type WeightedNode struct {
 	*Node
 	Frequency int
+}
+
+func (w WeightedNode) String() string {
+	return fmt.Sprintf("%d(%s)", w.Frequency, w.Node.String())
 }
 
 func NewWeightedNode(char byte, freq int, left, right *Node) WeightedNode {
@@ -29,6 +39,10 @@ func NewWeightedNode(char byte, freq int, left, right *Node) WeightedNode {
 
 func Tree(str string) *Node {
 	queue := NewPriorityQueue()
+	//queue.Push(WeightedNode{
+	//	Node:      &Node{Char: ETX},
+	//	Frequency: 1,
+	//})
 	queue.Push(countLetters(str)...)
 
 	for queue.Len() > 1 {
@@ -69,12 +83,16 @@ type Leaf struct {
 func (l Leaf) String() string {
 	return fmt.Sprintf(
 		"%s=%s",
-		string(l.Char), pad(strconv.FormatUint(uint64(l.Value), 2), "0", int(l.Bits)),
+		string(l.Char), pad(strconv.FormatUint(uint64(l.Value), 2), int(l.Bits)),
 	)
 }
 
-func pad(str, pad string, desired int) string {
-	return strings.Repeat(pad, (desired-len(str))/len(pad)) + str
+func pad(str string, desired int) string {
+	if len(str) >= desired {
+		return str
+	}
+
+	return strings.Repeat("0", desired-len(str)) + str
 }
 
 func countLetters(str string) (nodes []WeightedNode) {

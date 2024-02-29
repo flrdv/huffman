@@ -6,7 +6,7 @@ import (
 )
 
 func TestPrefixUniqueness(t *testing.T) {
-	symbols := Tree("beep boop beer!").AsList()
+	symbols := Tree("beep boop beer!").Leaves()
 
 	for _, a := range symbols {
 		for _, b := range symbols {

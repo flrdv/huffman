@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"strconv"
 	"unsafe"
 )
 
@@ -8,6 +10,10 @@ import (
 type Symbol struct {
 	Value uint32
 	Bits  uint8
+}
+
+func (s Symbol) String() string {
+	return pad(strconv.FormatUint(uint64(s.Value), 2), int(s.Bits))
 }
 
 type Queue struct {
@@ -74,30 +80,42 @@ func Compress(str string) ([]uint32, int) {
 		bits   uint8
 	)
 
+	// assume we're running under conventional machine
 	const bitsPerByte = 8
 	const bitsPerBatch = uint8(unsafe.Sizeof(batch) * bitsPerByte)
 
 	for !queue.IsEmpty() {
 		symbol := queue.Pop()
-		if symbol.Bits+bits <= bitsPerBatch {
+		if symbol.Bits+bits < bitsPerBatch {
 			batch = (batch << symbol.Bits) | symbol.Value
+			fmt.Println("nrm", format(batch, bitsPerBatch), format(symbol.Value, symbol.Bits), symbol.Bits)
 			bits += symbol.Bits
 			continue
 		}
 
 		bitsLeft := bitsPerBatch - bits
-		batch = (batch << bitsLeft) | (symbol.Value >> (symbol.Bits - bitsLeft))
-		leftover := symbol.Value & (0xffff >> (symbol.Bits - bitsLeft))
-		queue.Return(Symbol{leftover, symbol.Bits - bitsLeft})
+		leftoverBits := symbol.Bits - bitsLeft
+		batch = (batch << bitsLeft) | (symbol.Value >> (leftoverBits))
+		leftover := symbol.Value << (bitsPerBatch - leftoverBits) >> (bitsPerBatch - leftoverBits)
+		fmt.Println("brk", format(batch, bitsPerBatch), format(symbol.Value, symbol.Bits), symbol.Bits)
+		fmt.Println("LEFTOVER:", leftover)
+		queue.Return(Symbol{leftover, leftoverBits})
+
 		output = append(output, batch)
+		batch = 0
 		bits = 0
 	}
 
 	totalBits := len(output)*int(bitsPerBatch) + int(bits)
 
 	if bits > 0 {
+		batch <<= bitsPerBatch - bits
 		output = append(output, batch)
 	}
 
 	return output, totalBits
+}
+
+func format(u uint32, bitsize uint8) string {
+	return pad(strconv.FormatUint(uint64(u), 2), int(bitsize))
 }

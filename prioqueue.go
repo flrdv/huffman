@@ -13,7 +13,7 @@ func (p *PriorityQueue) Push(nodes ...WeightedNode) {
 }
 
 func (p *PriorityQueue) Pop() (n WeightedNode) {
-	if len(p.nodes) == 0 {
+	if p.Len() == 0 {
 		return n
 	}
 
