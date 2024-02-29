@@ -20,5 +20,10 @@ func main() {
 	fmt.Println("total bits:", bits)
 
 	decompressed, err := Decompress(Tree(str), compressed)
-	fmt.Println("err", err, "str", strconv.Quote(decompressed), len(str), len(decompressed))
+	if err != nil {
+		fmt.Println("ERROR:", err)
+		return
+	}
+
+	fmt.Println(strconv.Quote(decompressed))
 }

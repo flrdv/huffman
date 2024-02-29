@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"strconv"
 	"unsafe"
 )
@@ -48,8 +47,7 @@ func (q *Queue) IsEmpty() bool {
 	return len(q.values) <= q.index
 }
 
-func asSymbols(str string) (symbols []Symbol) {
-	leaves := Tree(str).Leaves()
+func asSymbols(leaves []Leaf, str string) (symbols []Symbol) {
 	for i := 0; i < len(str); i++ {
 		symbols = append(symbols, char2symbol(leaves, str[i]))
 	}
@@ -70,9 +68,27 @@ func char2symbol(leaves []Leaf, char byte) Symbol {
 	panic("char is not found in leaves")
 }
 
+func etx(leaves []Leaf) Symbol {
+	for _, leaf := range leaves {
+		if leaf.ETX {
+			return Symbol{
+				Value: leaf.Value,
+				Bits:  leaf.Bits,
+			}
+		}
+	}
+
+	return Symbol{
+		Value: 0,
+		Bits:  0,
+	}
+}
+
 func Compress(str string) ([]uint32, int) {
+	leaves := Tree(str).Leaves()
 	queue := NewQueue()
-	queue.Push(asSymbols(str)...)
+	queue.Push(asSymbols(leaves, str)...)
+	queue.Push(etx(leaves))
 
 	var (
 		output []uint32
@@ -87,20 +103,18 @@ func Compress(str string) ([]uint32, int) {
 	for !queue.IsEmpty() {
 		symbol := queue.Pop()
 		if symbol.Bits+bits < bitsPerBatch {
-			batch = (batch << symbol.Bits) | symbol.Value
-			fmt.Println("nrm", format(batch, bitsPerBatch), format(symbol.Value, symbol.Bits), symbol.Bits)
+			batch = batch | (symbol.Value << (bitsPerBatch - bits - symbol.Bits))
+			//fmt.Println("nrm", format(batch, bitsPerBatch), format(symbol.Value, symbol.Bits), symbol.Bits)
 			bits += symbol.Bits
 			continue
 		}
 
 		bitsLeft := bitsPerBatch - bits
 		leftoverBits := symbol.Bits - bitsLeft
-		batch = (batch << bitsLeft) | (symbol.Value >> (leftoverBits))
-		leftover := symbol.Value << (bitsPerBatch - leftoverBits) >> (bitsPerBatch - leftoverBits)
-		fmt.Println("brk", format(batch, bitsPerBatch), format(symbol.Value, symbol.Bits), symbol.Bits)
-		fmt.Println("LEFTOVER:", leftover)
-		queue.Return(Symbol{leftover, leftoverBits})
 
+		batch = batch | (symbol.Value >> (leftoverBits))
+		leftover := symbol.Value << (bitsPerBatch - leftoverBits) >> (bitsPerBatch - leftoverBits)
+		queue.Return(Symbol{leftover, leftoverBits})
 		output = append(output, batch)
 		batch = 0
 		bits = 0
@@ -109,7 +123,6 @@ func Compress(str string) ([]uint32, int) {
 	totalBits := len(output)*int(bitsPerBatch) + int(bits)
 
 	if bits > 0 {
-		batch <<= bitsPerBatch - bits
 		output = append(output, batch)
 	}
 

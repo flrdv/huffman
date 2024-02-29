@@ -6,11 +6,10 @@ import (
 	"strings"
 )
 
-const ETX = 0x03
-
 type Node struct {
 	Left, Right *Node
 	Char        byte
+	ETX         bool
 }
 
 func (n *Node) String() string {
@@ -37,13 +36,16 @@ func NewWeightedNode(char byte, freq int, left, right *Node) WeightedNode {
 	}
 }
 
+func NewETXNode() WeightedNode {
+	return WeightedNode{Node: &Node{
+		ETX: true,
+	}}
+}
+
 func Tree(str string) *Node {
 	queue := NewPriorityQueue()
-	//queue.Push(WeightedNode{
-	//	Node:      &Node{Char: ETX},
-	//	Frequency: 1,
-	//})
 	queue.Push(countLetters(str)...)
+	queue.Push(NewETXNode())
 
 	for queue.Len() > 1 {
 		a, b := queue.Pop(), queue.Pop()
@@ -58,9 +60,9 @@ func (n *Node) Leaves() (leaves []Leaf) {
 }
 
 func (n *Node) leaves(mask uint32, depth uint8) (leaves []Leaf) {
-	if n.Char != '\x00' {
+	if n.Char != '\x00' || n.ETX {
 		// the node is marked as a leaf, so it cannot have any children
-		return []Leaf{{n.Char, depth, mask}}
+		return []Leaf{{n.Char, depth, n.ETX, mask}}
 	}
 
 	if n.Left != nil {
@@ -77,13 +79,22 @@ func (n *Node) leaves(mask uint32, depth uint8) (leaves []Leaf) {
 type Leaf struct {
 	Char  byte
 	Bits  uint8
+	ETX   bool
 	Value uint32
 }
 
 func (l Leaf) String() string {
+	char := string(l.Char)
+	switch {
+	case char == " ":
+		char = "<SP>"
+	case l.ETX:
+		char = "<ETX>"
+	}
+
 	return fmt.Sprintf(
-		"%s=%s",
-		string(l.Char), pad(strconv.FormatUint(uint64(l.Value), 2), int(l.Bits)),
+		"%s: %s",
+		char, pad(strconv.FormatUint(uint64(l.Value), 2), int(l.Bits)),
 	)
 }
 

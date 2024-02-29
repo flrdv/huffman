@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"unsafe"
 )
 
@@ -26,9 +27,8 @@ func (b *BitQueue) Pop() byte {
 
 	const bitsPerValue = uint8(unsafe.Sizeof(b.values[0])) * 8
 	bit := byte(b.values[b.index]>>(bitsPerValue-b.bitShift-1)) & 1
-
 	b.bitShift++
-	if b.bitShift > bitsPerValue {
+	if b.bitShift >= bitsPerValue {
 		b.bitShift = 0
 		b.index++
 	}
@@ -54,19 +54,15 @@ func Decompress(root *Node, data []uint32) (string, error) {
 			node = node.Right
 		}
 
-		switch node.Char {
-		case '\x00':
-		case ETX:
+		if node.ETX {
 			return string(decompressed), nil
-		default:
+		}
+
+		if node.Char != '\x00' {
 			decompressed = append(decompressed, node.Char)
 			node = root
 		}
 	}
 
-	//if node != root {
-	//	return "", fmt.Errorf("incomplete sequence")
-	//}
-
-	return string(decompressed), nil
+	return "", fmt.Errorf("no ETX marker")
 }
